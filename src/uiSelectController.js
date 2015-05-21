@@ -5,8 +5,8 @@
  * put as much logic in the controller (instead of the link functions) as possible so it can be easily tested.
  */
 uis.controller('uiSelectCtrl',
-  ['$scope', '$element', '$timeout', '$filter', 'uisRepeatParser', 'uiSelectMinErr', 'uiSelectConfig',
-  function($scope, $element, $timeout, $filter, RepeatParser, uiSelectMinErr, uiSelectConfig) {
+  ['$scope', '$element', '$timeout', '$filter', 'uisRepeatParser', 'uiSelectMinErr', 'uiSelectConfig', 'uiSelectDevice',
+  function($scope, $element, $timeout, $filter, RepeatParser, uiSelectMinErr, uiSelectConfig, uiSelectDevice) {
 
   var ctrl = this;
 
@@ -61,6 +61,10 @@ uis.controller('uiSelectCtrl',
 
   // When the user clicks on ui-select, displays the dropdown list
   ctrl.activate = function(initSearchValue, avoidReset) {
+    var focusSearchInput = function () {
+      ctrl.search = initSearchValue || ctrl.search;
+      ctrl.searchInput[0].focus();
+    };
     if (!ctrl.disabled  && !ctrl.open) {
       if(!avoidReset) _resetSearchInput();
 
@@ -76,11 +80,13 @@ uis.controller('uiSelectCtrl',
         ctrl.activeIndex = 0;
       }
 
-      // Give it time to appear before focus
-      $timeout(function() {
-        ctrl.search = initSearchValue || ctrl.search;
-        ctrl.searchInput[0].focus();
-      });
+      // on iOS we cannot set focus on a not user started thread, see https://github.com/angular-ui/ui-select/issues/603
+      if (uiSelectDevice.isiOS()) {
+        focusSearchInput();
+      } else {
+        // Give it time to appear before focus
+        $timeout(focusSearchInput);
+      }
     }
   };
 
@@ -293,7 +299,12 @@ uis.controller('uiSelectCtrl',
     _resetSearchInput();
     ctrl.open = false;
 
-    $scope.$broadcast('uis:close', skipFocusser);
+    // on iOS we prevent keyboard jumping, see https://github.com/angular-ui/ui-select/issues/603
+    if (uiSelectDevice.isiOS()) {
+      $scope.$broadcast('uis:close', true);
+    } else {
+      $scope.$broadcast('uis:close', skipFocusser);
+    }
 
   };
 

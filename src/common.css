@@ -211,3 +211,15 @@ body > .ui-select-bootstrap.open {
 .ui-select-bootstrap.ng-dirty.ng-invalid > button.btn.ui-select-match {
     border-color: #D44950;
 }
+
+/* Not render the autocomplete input field if it's not focused */
+.uiselect-display-none {
+    display: none !important;
+}
+
+/* Hides the autocomplete input field if it's not focused, used for IOS devices where we can't focus the input field after render */
+.uiselect-display-hide {
+    overflow: hidden;
+    height: 0;
+    opacity: 0;
+}

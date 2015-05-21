@@ -1,4 +1,4 @@
-
+/* global navigator */
 var KEY = {
     TAB: 9,
     ENTER: 13,
@@ -97,6 +97,21 @@ var uis = angular.module('ui.select', [])
     return latestId++;
   },
   appendToBody: false
+})
+
+.service('uiSelectDevice', function () {
+  var userAgent = navigator.userAgent;
+  return {
+    isiOS: function() {
+      return (/(iPad|iPhone|iPod)/gi).test(userAgent);
+    },
+    isAndroid: function() {
+      return (/(Android)/gi).test(userAgent);
+    },
+    isWindowsPhone: function() {
+      return (/(IEMobile)/gi).test(userAgent);
+    }
+  };
 })
 
 // See Rename minErr and make it accessible from outside https://github.com/angular/angular.js/issues/6913

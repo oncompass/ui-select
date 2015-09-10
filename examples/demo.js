@@ -13,10 +13,11 @@ app.filter('propsFilter', function() {
     var out = [];
 
     if (angular.isArray(items)) {
+      var keys = Object.keys(props);
+        
       items.forEach(function(item) {
         var itemMatches = false;
 
-        var keys = Object.keys(props);
         for (var i = 0; i < keys.length; i++) {
           var prop = keys[i];
           var text = props[prop].toLowerCase();
@@ -77,6 +78,14 @@ app.controller('DemoCtrl', function($scope, $http, $timeout, $interval) {
     if (item.name[0] >= 'N' && item.name[0] <= 'Z')
         return 'From N - Z';
 
+  };
+
+  $scope.firstLetterGroupFn = function (item){
+      return item.name[0];
+  };
+
+  $scope.reverseOrderFilterFn = function(groups) {
+    return groups.reverse();
   };
 
   $scope.personAsync = {selected : "wladimir@email.com"};

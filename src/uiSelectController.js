@@ -59,6 +59,18 @@ uis.controller('uiSelectCtrl',
     }
   }
 
+    function _groupsFilter(groups, groupNames) {
+      var i, j, result = [];
+      for(i = 0; i < groupNames.length ;i++){
+        for(j = 0; j < groups.length ;j++){
+          if(groups[j].name == [groupNames[i]]){
+            result.push(groups[j]);
+          }
+        }
+      }
+      return result;
+    }
+
   // When the user clicks on ui-select, displays the dropdown list
   ctrl.activate = function(initSearchValue, avoidReset) {
     var focusSearchInput = function () {
@@ -96,11 +108,11 @@ uis.controller('uiSelectCtrl',
     })[0];
   };
 
-  ctrl.parseRepeatAttr = function(repeatAttr, groupByExp) {
+  ctrl.parseRepeatAttr = function(repeatAttr, groupByExp, groupFilterExp) {
     function updateGroups(items) {
+      var groupFn = $scope.$eval(groupByExp);
       ctrl.groups = [];
       angular.forEach(items, function(item) {
-        var groupFn = $scope.$eval(groupByExp);
         var groupName = angular.isFunction(groupFn) ? groupFn(item) : item[groupFn];
         var group = ctrl.findGroupByName(groupName);
         if(group) {
@@ -110,6 +122,14 @@ uis.controller('uiSelectCtrl',
           ctrl.groups.push({name: groupName, items: [item]});
         }
       });
+      if(groupFilterExp){
+        var groupFilterFn = $scope.$eval(groupFilterExp);
+        if( angular.isFunction(groupFilterFn)){
+          ctrl.groups = groupFilterFn(ctrl.groups);
+        } else if(angular.isArray(groupFilterFn)){
+          ctrl.groups = _groupsFilter(ctrl.groups, groupFilterFn);
+        }
+      }
       ctrl.items = [];
       ctrl.groups.forEach(function(group) {
         ctrl.items = ctrl.items.concat(group.items);
@@ -131,11 +151,11 @@ uis.controller('uiSelectCtrl',
       data = data || ctrl.parserResult.source($scope);
       var selectedItems = ctrl.selected;
       //TODO should implement for single mode removeSelected
-      if ((angular.isArray(selectedItems) && !selectedItems.length) || !ctrl.removeSelected) {
+      if (ctrl.isEmpty() || (angular.isArray(selectedItems) && !selectedItems.length) || !ctrl.removeSelected) {
         ctrl.setItemsFn(data);
       }else{
         if ( data !== undefined ) {
-          var filteredItems = data.filter(function(i) {return selectedItems.indexOf(i) < 0;});
+          var filteredItems = data.filter(function(i) {return selectedItems && selectedItems.indexOf(i) < 0;});
           ctrl.setItemsFn(filteredItems);
         }
       }
@@ -389,8 +409,8 @@ uis.controller('uiSelectCtrl',
         if (!ctrl.multiple || ctrl.open) ctrl.select(ctrl.items[ctrl.activeIndex], true);
         break;
       case KEY.ENTER:
-        if(ctrl.open && ctrl.activeIndex >= 0){
-          ctrl.select(ctrl.items[ctrl.activeIndex]); // Make sure at least one dropdown item is highlighted before adding.
+        if(ctrl.open && (ctrl.tagging.isActivated || ctrl.activeIndex >= 0)){
+          ctrl.select(ctrl.items[ctrl.activeIndex]); // Make sure at least one dropdown item is highlighted before adding if not in tagging mode
         } else {
           ctrl.activate(false, true); //In case its the search input in 'multiple' mode
         }
@@ -446,6 +466,11 @@ uis.controller('uiSelectCtrl',
 
     if(KEY.isVerticalMovement(key) && ctrl.items.length > 0){
       _ensureHighlightVisible();
+    }
+
+    if (key === KEY.ENTER || key === KEY.ESC) {
+      e.preventDefault();
+      e.stopPropagation();
     }
 
   });

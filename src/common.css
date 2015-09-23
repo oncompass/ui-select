@@ -263,4 +263,6 @@ body > .ui-select-bootstrap.open {
     overflow: hidden;
     height: 0;
     opacity: 0;
+    padding: 0;
+    border: 0;
 }

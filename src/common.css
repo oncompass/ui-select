@@ -258,7 +258,7 @@ body > .ui-select-bootstrap.open {
     display: none !important;
 }
 
-/* Hides the autocomplete input field if it's not focused, used for IOS devices where we can't focus the input field after render */
+/* Hides the autocomplete input field if it's not focused - with this class we can make the autocomplete more responsive */
 .uiselect-display-hide {
     overflow: hidden;
     height: 0;

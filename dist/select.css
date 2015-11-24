@@ -1,7 +1,7 @@
 /*!
  * ui-select
  * http://github.com/angular-ui/ui-select
- * Version: 0.12.1 - 2015-09-10T08:37:30.946Z
+ * Version: 0.12.1 - 2015-11-24T11:14:14.396Z
  * License: MIT
  */
 
@@ -266,7 +266,7 @@ body > .ui-select-bootstrap.open {
     display: none !important;
 }
 
-/* Hides the autocomplete input field if it's not focused, used for IOS devices where we can't focus the input field after render */
+/* Hides the autocomplete input field if it's not focused - with this class we can make the autocomplete more responsive */
 .uiselect-display-hide {
     overflow: hidden;
     height: 0;

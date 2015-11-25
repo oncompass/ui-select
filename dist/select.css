@@ -1,7 +1,7 @@
 /*!
  * ui-select
  * http://github.com/angular-ui/ui-select
- * Version: 0.12.1 - 2015-11-24T11:14:14.396Z
+ * Version: 0.12.2 - 2015-11-25T12:14:19.615Z
  * License: MIT
  */
 
@@ -142,6 +142,35 @@ body > .select2-container.open {
   border-radius: 4px !important; /* FIXME hardcoded value :-/ */
   border-top-right-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
+}
+
+.ui-select-nautilus {
+  position: relative;
+  min-height: 34px;
+}
+
+.ui-select-nautilus .input-wrapper {
+  height: 0;
+  overflow: hidden;
+}
+
+.ui-select-container.open .ui-select-nautilus .input-wrapper {
+  height: 34px;
+  overflow: visible;
+}
+
+.ui-select-nautilus input {
+  position: relative;
+  top: 0;
+}
+
+.ui-select-nautilus .ui-select-match {
+  position: relative;
+  top: 0;
+}
+
+.ui-select-nautilus .ui-select-match  .btn{
+  text-align: left;
 }
 
 .ui-select-bootstrap > .ui-select-match > .btn{

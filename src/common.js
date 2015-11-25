@@ -87,7 +87,7 @@ var latestId = 0;
 var uis = angular.module('ui.select', [])
 
 .constant('uiSelectConfig', {
-  theme: 'bootstrap',
+  theme: 'bsnautilus',
   searchEnabled: true,
   sortable: false,
   placeholder: '', // Empty by default, like HTML tag <select>

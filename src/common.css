@@ -136,6 +136,35 @@ body > .select2-container.open {
   border-bottom-right-radius: 0 !important;
 }
 
+.ui-select-nautilus {
+  position: relative;
+  min-height: 34px;
+}
+
+.ui-select-nautilus .input-wrapper {
+  height: 0;
+  overflow: hidden;
+}
+
+.ui-select-nautilus.open .input-wrapper {
+  height: 34px;
+  overflow: visible;
+}
+
+.ui-select-nautilus input {
+  position: relative;
+  top: 0;
+}
+
+.ui-select-nautilus .ui-select-match {
+  position: relative;
+  top: 0;
+}
+
+.ui-select-nautilus .ui-select-match  .btn{
+  text-align: left;
+}
+
 .ui-select-bootstrap > .ui-select-match > .btn{
   /* Instead of center because of .btn */
   text-align: left !important;

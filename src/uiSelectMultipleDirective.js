@@ -398,6 +398,14 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
 
       $select.searchInput.on('blur', function() {
         $timeout(function() {
+          if($select.tagging.isActivated && $select.searchInput.val().length > 0){
+            var newItem = $select.searchInput.val();
+            newItem = angular.isFunction($select.tagging.fct) ? $select.tagging.fct(newItem) :  newItem;
+            if(newItem && $select.selected.indexOf(newItem) === -1){
+              scope.$broadcast('uis:select', newItem);
+              $select.searchInput.val('');
+            }
+          }
           $selectMultiple.activeMatchIndex = -1;
         });
       });

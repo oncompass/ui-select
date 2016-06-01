@@ -9,6 +9,9 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
           $select = $scope.$select,
           ngModel;
 
+      if (angular.isUndefined($select.selected))
+        $select.selected = [];
+
       //Wait for link fn to inject it
       $scope.$evalAsync(function(){ ngModel = $scope.ngModel; });
 
@@ -73,10 +76,14 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
       //$select.selected = raw selected objects (ignoring any property binding)
 
       $select.multiple = true;
-      $select.removeSelected = true;
 
       //Input that will handle focus
       $select.focusInput = $select.searchInput;
+
+      //Properly check for empty if set to multiple
+      ngModel.$isEmpty = function(value) {
+        return !value || value.length === 0;
+      };
 
       //From view --> model
       ngModel.$parsers.unshift(function () {
@@ -94,7 +101,7 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
 
       // From model --> view
       ngModel.$formatters.unshift(function (inputValue) {
-        var data = $select.parserResult.source (scope, { $select : {search:''}}), //Overwrite $search
+        var data = $select.parserResult && $select.parserResult.source (scope, { $select : {search:''}}), //Overwrite $search
             locals = {},
             result;
         if (!data) return inputValue;
@@ -105,10 +112,13 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
             locals[$select.parserResult.itemName] = list[p];
             result = $select.parserResult.modelMapper(scope, locals);
             if($select.parserResult.trackByExp){
-                var matches = /\.(.+)/.exec($select.parserResult.trackByExp);
-                if(matches.length>0 && result[matches[1]] == value[matches[1]]){
-                    resultMultiple.unshift(list[p]);
-                    return true;
+                var propsItemNameMatches = /(\w*)\./.exec($select.parserResult.trackByExp);
+                var matches = /\.([^\s]+)/.exec($select.parserResult.trackByExp);
+                if(propsItemNameMatches && propsItemNameMatches.length > 0 && propsItemNameMatches[1] == $select.parserResult.itemName){
+                  if(matches && matches.length>0 && result[matches[1]] == value[matches[1]]){
+                      resultMultiple.unshift(list[p]);
+                      return true;
+                  }
                 }
             }
             if (angular.equals(result,value)){
@@ -135,7 +145,10 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
       //Watch for external model changes
       scope.$watchCollection(function(){ return ngModel.$modelValue; }, function(newValue, oldValue) {
         if (oldValue != newValue){
-          ngModel.$modelValue = null; //Force scope model value and ngModel value to be out of sync to re-run formatters
+          //update the view value with fresh data from items, if there is a valid model value
+          if(angular.isDefined(ngModel.$modelValue)) {
+            ngModel.$modelValue = null; //Force scope model value and ngModel value to be out of sync to re-run formatters
+          }
           $selectMultiple.refreshComponent();
         }
       });
@@ -151,6 +164,7 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
           }
         }
         $select.selected = ngModel.$viewValue;
+        $selectMultiple.refreshComponent();
         scope.$evalAsync(); //To force $digest
       };
 
@@ -296,12 +310,22 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
               stashArr = stashArr.slice(1,stashArr.length);
             }
             newItem = $select.tagging.fct($select.search);
-            newItem.isTag = true;
-            // verify the the tag doesn't match the value of an existing item
-            if ( stashArr.filter( function (origItem) { return angular.equals( origItem, $select.tagging.fct($select.search) ); } ).length > 0 ) {
+            // verify the new tag doesn't match the value of a possible selection choice or an already selected item.
+            if (
+              stashArr.some(function (origItem) {
+                 return angular.equals(origItem, newItem);
+              }) ||
+              $select.selected.some(function (origItem) {
+                return angular.equals(origItem, newItem);
+              })
+            ) {
+              scope.$evalAsync(function () {
+                $select.activeIndex = 0;
+                $select.items = items;
+              });
               return;
             }
-            newItem.isTag = true;
+            if (newItem) newItem.isTag = true;
           // handle newItem string and stripping dupes in tagging string context
           } else {
             // find any tagging items already in the $select.items array and store them
@@ -350,12 +374,23 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
             items = items.slice(dupeIndex+1,items.length-1);
           } else {
             items = [];
-            items.push(newItem);
+            if (newItem) items.push(newItem);
             items = items.concat(stashArr);
           }
           scope.$evalAsync( function () {
             $select.activeIndex = 0;
             $select.items = items;
+
+            if ($select.isGrouped) {
+              // update item references in groups, so that indexOf will work after angular.copy
+              var itemsWithoutTag = newItem ? items.slice(1) : items;
+              $select.setItemsFn(itemsWithoutTag);
+              if (newItem) {
+                // add tag item as a new group
+                $select.items.unshift(newItem);
+                $select.groups.unshift({name: '', items: [newItem], tagging: true});
+              }
+            }
           });
         }
       });
@@ -386,9 +421,11 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
             // handle the object tagging implementation
             } else {
               var mockObj = tempArr[i];
-              mockObj.isTag = true;
+              if (angular.isObject(mockObj)) {
+                mockObj.isTag = true;
+              }
               if ( angular.equals(mockObj, needle) ) {
-              dupeIndex = i;
+                dupeIndex = i;
               }
             }
           }

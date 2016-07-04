@@ -130,13 +130,13 @@ uis.controller('uiSelectCtrl',
           if (phase === 'start' && ctrl.items.length === 0) {
             // Only focus input after the animation has finished
             ctrl.$animate.off('removeClass', searchInput[0], animateHandler);
-            deviceSafeTimeout(function () {
+            ctrl.deviceSafeTimeout(function () {
               ctrl.focusSearchInput(initSearchValue);
             });
           } else if (phase === 'close') {
             // Only focus input after the animation has finished
             ctrl.$animate.off('enter', container[0], animateHandler);
-            deviceSafeTimeout(function () {
+            ctrl.deviceSafeTimeout(function () {
               ctrl.focusSearchInput(initSearchValue);
             });
           }
@@ -156,7 +156,7 @@ uis.controller('uiSelectCtrl',
         //  $timeout(focusSearchInput, 100);
         //}
 
-        deviceSafeTimeout(function () {
+        ctrl.deviceSafeTimeout(function () {
           ctrl.focusSearchInput(initSearchValue);
           if(!ctrl.tagging.isActivated && ctrl.items.length > 1) {
             _ensureHighlightVisible();
@@ -254,13 +254,15 @@ uis.controller('uiSelectCtrl',
       if (ctrl.isEmpty() || (angular.isArray(selectedItems) && !selectedItems.length) || !ctrl.removeSelected) {
         ctrl.setItemsFn(data);
       }else{
-        if ( data !== undefined ) {
+        if ( data !== undefined && ctrl.multiple) {
           var filteredItems = data.filter(function(i) {
             return angular.isArray(selectedItems) ? selectedItems.every(function(selectedItem) {
               return !angular.equals(i, selectedItem);
             }) : !angular.equals(i, selectedItems);
           });
           ctrl.setItemsFn(filteredItems);
+        } else if (data !== undefined) {
+          ctrl.setItemsFn(data);
         }
       }
       if (ctrl.dropdownPosition === 'auto' || ctrl.dropdownPosition === 'up'){

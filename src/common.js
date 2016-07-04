@@ -1,3 +1,4 @@
+/* global navigator */
 var KEY = {
     TAB: 9,
     ENTER: 13,

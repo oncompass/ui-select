@@ -45,14 +45,16 @@ uis.controller('uiSelectCtrl',
   ctrl.$element = $element;
 
   // Use $injector to check for $animate and store a reference to it
-  ctrl.$animate = (function () {
-    try {
-      return $injector.get('$animate');
-    } catch (err) {
-      // $animate does not exist
-      return null;
-    }
-  })();
+  // $animate causes problems with empty choices list by not focusing to the editor (animateHandler never runs)
+  // so turning this off, until https://github.com/angular-ui/ui-select/issues/1592
+  //ctrl.$animate = (function () {
+  //  try {
+  //    return $injector.get('$animate');
+  //  } catch (err) {
+  //    // $animate does not exist
+  //    return null;
+  //  }
+  //})();
 
   ctrl.searchInput = $element.querySelectorAll('input.ui-select-search');
   if (ctrl.searchInput.length !== 1) {
@@ -148,21 +150,12 @@ uis.controller('uiSelectCtrl',
           ctrl.$animate.on('removeClass', searchInput[0], animateHandler);
         }
       } else {
-
-        //if (uiSelectDevice.isiOS()) {
-        //  focusSearchInput();
-        //} else {
-        //  // Give it time to appear before focus
-        //  $timeout(focusSearchInput, 100);
-        //}
-
         ctrl.deviceSafeTimeout(function () {
           ctrl.focusSearchInput(initSearchValue);
           if(!ctrl.tagging.isActivated && ctrl.items.length > 1) {
             _ensureHighlightVisible();
           }
         });
-        //>>>>>>> upstream/master
       }
     }
   };

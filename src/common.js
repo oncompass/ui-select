@@ -103,6 +103,7 @@ var uis = angular.module('ui.select', [])
   skipFocusser: false,
   dropdownPosition: 'auto',
   removeSelected: true,
+  resetSearchInput: true,
   generateId: function() {
     return latestId++;
   },

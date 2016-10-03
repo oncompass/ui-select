@@ -159,6 +159,8 @@ describe('ui-select tests', function() {
       if (attrs.allowClear !== undefined) { matchAttrsHtml += ' allow-clear="' + attrs.allowClear + '"';}
       if (attrs.inputId !== undefined) { attrsHtml += ' input-id="' + attrs.inputId + '"'; }
       if (attrs.ngClass !== undefined) { attrsHtml += ' ng-class="' + attrs.ngClass + '"'; }
+      if (attrs.resetSearchInput !== undefined) { attrsHtml += ' reset-search-input="' + attrs.resetSearchInput + '"'; }
+      if (attrs.closeOnSelect !== undefined) { attrsHtml += ' close-on-select="' + attrs.closeOnSelect + '"'; }
     }
 
     return compileTemplate(
@@ -1375,6 +1377,32 @@ describe('ui-select tests', function() {
     expect(scope.$model).toBe(scope.$item);
   });
 
+  it('should call open-close callback with isOpen state as first argument on open and on close', function () {
+
+    var el = compileTemplate(
+      '<ui-select uis-open-close="onOpenCloseFn(isOpen)" ng-model="selection.selected"> \
+        <ui-select-match placeholder="Pick one...">{{$select.selected.name}}</ui-select-match> \
+        <ui-select-choices repeat="person.name as person in people | filter: $select.search"> \
+          <div ng-bind-html="person.name | highlight: $select.search"></div> \
+          <div ng-bind-html="person.email | highlight: $select.search"></div> \
+        </ui-select-choices> \
+      </ui-select>'
+    );
+
+    scope.onOpenCloseFn = function(){};
+    spyOn(scope, 'onOpenCloseFn');
+
+    openDropdown(el);
+    $timeout.flush();
+    expect(scope.onOpenCloseFn).toHaveBeenCalledWith(true);
+
+    closeDropdown(el);
+    $timeout.flush();
+    expect(scope.onOpenCloseFn).toHaveBeenCalledWith(false);
+
+    expect(scope.onOpenCloseFn.calls.count()).toBe(2);
+  });
+
   it('should allow creating tag in single select mode with tagging enabled', function() {
 
     scope.taggingFunc = function (name) {
@@ -1427,7 +1455,32 @@ describe('ui-select tests', function() {
     expect($(el).scope().$select.selected).toEqual(['idontexist']);
   });
 
-  it('should remove a choice when remove-selected is not given (default is true)', function () {
+  it('should allow selecting an item (click) in single select mode with tagging enabled', function() {
+
+    scope.taggingFunc = function (name) {
+      return name;
+    };
+
+    var el = compileTemplate(
+      '<ui-select ng-model="selection.selected" tagging="taggingFunc" tagging-label="false"> \
+        <ui-select-match placeholder="Pick one...">{{$select.selected.name}}</ui-select-match> \
+        <ui-select-choices repeat="person in people | filter: $select.search"> \
+          <div ng-bind-html="person.name" | highlight: $select.search"></div> \
+          <div ng-bind-html="person.email | highlight: $select.search"></div> \
+        </ui-select-choices> \
+      </ui-select>'
+    );
+
+    clickMatch(el);
+    setSearchText(el, 'Sam');
+    clickItem(el, 'Samantha');
+
+    expect(scope.selection.selected).toBe(scope.people[5]);
+    expect(getMatchLabel(el)).toEqual('Samantha');
+  });
+
+
+  it('should remove a choice when multiple and remove-selected is not given (default is true)', function () {
 
     var el = compileTemplate(
       '<ui-select multiple ng-model="selection.selected"> \
@@ -1448,6 +1501,31 @@ describe('ui-select tests', function() {
     expect(choicesEls.length).toEqual(6);
 
     ['Adam', 'Amalie', 'Estefanía', 'Wladimir', 'Nicole', 'Natasha'].forEach(function (name, index) {
+      expect($(choicesEls[index]).hasClass('disabled')).toBeFalsy();
+      expect($(choicesEls[index]).find('.person-name').text()).toEqual(name);
+    });
+  });
+
+  it('should not remove a pre-selected choice when not multiple and remove-selected is not given (default is true)', function () {
+    scope.selection.selected = scope.people[5]; // Samantha
+
+    var el = compileTemplate(
+      '<ui-select ng-model="selection.selected"> \
+        <ui-select-match placeholder="Pick one...">{{$select.selected.name}}</ui-select-match> \
+        <ui-select-choices repeat="person in people | filter: $select.search"> \
+          <div class="person-name" ng-bind-html="person.name" | highlight: $select.search"></div> \
+          <div ng-bind-html="person.email | highlight: $select.search"></div> \
+        </ui-select-choices> \
+      </ui-select>'
+    );
+
+    expect(getMatchLabel(el)).toEqual("Samantha");
+    openDropdown(el);
+
+    var choicesEls = $(el).find('.ui-select-choices-row');
+    expect(choicesEls.length).toEqual(8);
+
+    ['Adam', 'Amalie', 'Estefanía', 'Adrian', 'Wladimir', 'Samantha', 'Nicole', 'Natasha'].forEach(function (name, index) {
       expect($(choicesEls[index]).hasClass('disabled')).toBeFalsy();
       expect($(choicesEls[index]).find('.person-name').text()).toEqual(name);
     });
@@ -1673,12 +1751,12 @@ describe('ui-select tests', function() {
 
       it('should show search input when true', function() {
         setupSelectComponent(true, 'selectize');
-        expect($(el).find('.ui-select-search')).not.toHaveClass('ng-hide');
+        expect($(el).find('.ui-select-search')).not.toHaveClass('ui-select-search-hidden');
       });
 
       it('should hide search input when false', function() {
         setupSelectComponent(false, 'selectize');
-        expect($(el).find('.ui-select-search')).toHaveClass('ng-hide');
+        expect($(el).find('.ui-select-search')).toHaveClass('ui-select-search-hidden');
       });
 
     });
@@ -1687,12 +1765,12 @@ describe('ui-select tests', function() {
 
       it('should show search input when true', function() {
         setupSelectComponent('true', 'select2');
-        expect($(el).find('.select2-search')).not.toHaveClass('ng-hide');
+        expect($(el).find('.search-container')).not.toHaveClass('ui-select-search-hidden');
       });
 
       it('should hide search input when false', function() {
         setupSelectComponent('false', 'select2');
-        expect($(el).find('.select2-search')).toHaveClass('ng-hide');
+        expect($(el).find('.search-container')).toHaveClass('ui-select-search-hidden');
       });
 
     });
@@ -1702,13 +1780,13 @@ describe('ui-select tests', function() {
       it('should show search input when true', function() {
         setupSelectComponent('true', 'bootstrap');
         clickMatch(el);
-        expect($(el).find('.ui-select-search')).not.toHaveClass('ng-hide');
+        expect($(el).find('.ui-select-search')).not.toHaveClass('ui-select-search-hidden');
       });
 
       it('should hide search input when false', function() {
         setupSelectComponent('false', 'bootstrap');
         clickMatch(el);
-        expect($(el).find('.ui-select-search')).toHaveClass('ng-hide');
+        expect($(el).find('.ui-select-search')).toHaveClass('ui-select-search-hidden');
       });
 
     });
@@ -1720,7 +1798,8 @@ describe('ui-select tests', function() {
 
     function createUiSelectMultiple(attrs) {
         var attrsHtml = '',
-            choicesAttrsHtml = '';
+            choicesAttrsHtml = '',
+            matchesAttrsHtml = '';
         if (attrs !== undefined) {
             if (attrs.disabled !== undefined) { attrsHtml += ' ng-disabled="' + attrs.disabled + '"'; }
             if (attrs.required !== undefined) { attrsHtml += ' ng-required="' + attrs.required + '"'; }
@@ -1728,13 +1807,17 @@ describe('ui-select tests', function() {
             if (attrs.closeOnSelect !== undefined) { attrsHtml += ' close-on-select="' + attrs.closeOnSelect + '"'; }
             if (attrs.tagging !== undefined) { attrsHtml += ' tagging="' + attrs.tagging + '"'; }
             if (attrs.taggingTokens !== undefined) { attrsHtml += ' tagging-tokens="' + attrs.taggingTokens + '"'; }
+            if (attrs.taggingLabel !== undefined) { attrsHtml += ' tagging-label="' + attrs.taggingLabel + '"'; }
             if (attrs.inputId !== undefined) { attrsHtml += ' input-id="' + attrs.inputId + '"'; }
             if (attrs.groupBy !== undefined) { choicesAttrsHtml += ' group-by="' + attrs.groupBy + '"'; }
+            if (attrs.lockChoice !== undefined) { matchesAttrsHtml += ' ui-lock-choice="' + attrs.lockChoice + '"'; }
+            if (attrs.removeSelected !== undefined) { attrsHtml += ' remove-selected="' + attrs.removeSelected + '"'; }
+            if (attrs.resetSearchInput !== undefined) { attrsHtml += ' reset-search-input="' + attrs.resetSearchInput + '"'; }
         }
 
         return compileTemplate(
             '<ui-select multiple ng-model="selection.selectedMultiple"' + attrsHtml + ' theme="bootstrap" style="width: 800px;"> \
-                <ui-select-match placeholder="Pick one...">{{$item.name}} &lt;{{$item.email}}&gt;</ui-select-match> \
+                <ui-select-match "' + matchesAttrsHtml + ' placeholder="Pick one...">{{$item.name}} &lt;{{$item.email}}&gt;</ui-select-match> \
                 <ui-select-choices repeat="person in people | filter: $select.search"' + choicesAttrsHtml + '> \
                   <div ng-bind-html="person.name | highlight: $select.search"></div> \
                   <div ng-bind-html="person.email | highlight: $select.search"></div> \
@@ -1895,6 +1978,37 @@ describe('ui-select tests', function() {
         expect(el.scope().$selectMultiple.activeMatchIndex).toBe(1);
 
     });
+
+    it('should NOT remove highlighted match when pressing BACKSPACE key on a locked choice', function() {
+
+        scope.selection.selectedMultiple = [scope.people[4], scope.people[5], scope.people[6]]; //Wladimir, Samantha & Nicole
+        var el = createUiSelectMultiple({lockChoice: "$item.name == '" + scope.people[6].name + "'"});
+        var searchInput = el.find('.ui-select-search');
+
+        expect(isDropdownOpened(el)).toEqual(false);
+        triggerKeydown(searchInput, Key.Left);
+        triggerKeydown(searchInput, Key.Backspace);
+        expect(el.scope().$select.selected).toEqual([scope.people[4], scope.people[5], scope.people[6]]); //Wladimir, Samantha & Nicole
+
+        expect(el.scope().$selectMultiple.activeMatchIndex).toBe(scope.selection.selectedMultiple.length - 1);
+
+    });
+
+    it('should NOT remove highlighted match when pressing DELETE key on a locked choice', function() {
+
+        scope.selection.selectedMultiple = [scope.people[4], scope.people[5], scope.people[6]]; //Wladimir, Samantha & Nicole
+        var el = createUiSelectMultiple({lockChoice: "$item.name == '" + scope.people[6].name + "'"});
+        var searchInput = el.find('.ui-select-search');
+
+        expect(isDropdownOpened(el)).toEqual(false);
+        triggerKeydown(searchInput, Key.Left);
+        triggerKeydown(searchInput, Key.Delete);
+        expect(el.scope().$select.selected).toEqual([scope.people[4], scope.people[5], scope.people[6]]); //Wladimir, Samantha & Nicole
+
+        expect(el.scope().$selectMultiple.activeMatchIndex).toBe(scope.selection.selectedMultiple.length - 1);
+
+    });
+
 
     it('should move to last match when pressing LEFT key from search', function() {
 
@@ -2468,6 +2582,43 @@ describe('ui-select tests', function() {
       expect(el.scope().$select.items[1]).toEqual(jasmine.objectContaining({name: 'Amalie', email: 'amalie@email.com'}));
     });
 
+
+    it('should have tolerance for undefined values', function () {
+
+      scope.modelValue = undefined;
+
+      var el = compileTemplate(
+          '<ui-select multiple ng-model="modelValue" theme="bootstrap" style="width: 800px;"> \
+              <ui-select-match placeholder="Pick one...">{{$item.name}} &lt;{{$item.email}}&gt;</ui-select-match> \
+              <ui-select-choices repeat="person.email as person in people | filter: $select.search"> \
+                <div ng-bind-html="person.name | highlight: $select.search"></div> \
+                <div ng-bind-html="person.email | highlight: $select.search"></div> \
+              </ui-select-choices> \
+          </ui-select> \
+          '
+      );
+
+      expect($(el).scope().$select.selected).toEqual([]);
+    });
+
+    it('should have tolerance for null values', function () {
+
+      scope.modelValue = null;
+
+      var el = compileTemplate(
+          '<ui-select multiple ng-model="modelValue" theme="bootstrap" style="width: 800px;"> \
+              <ui-select-match placeholder="Pick one...">{{$item.name}} &lt;{{$item.email}}&gt;</ui-select-match> \
+              <ui-select-choices repeat="person.email as person in people | filter: $select.search"> \
+                <div ng-bind-html="person.name | highlight: $select.search"></div> \
+                <div ng-bind-html="person.email | highlight: $select.search"></div> \
+              </ui-select-choices> \
+          </ui-select> \
+          '
+      );
+
+      expect($(el).scope().$select.selected).toEqual([]);
+    });
+
     it('should allow paste tag from clipboard', function() {
       scope.taggingFunc = function (name) {
         return {
@@ -2570,6 +2721,14 @@ describe('ui-select tests', function() {
       expect($(el).scope().$select.selected).toEqual(['tag1', 'tag2', 'tag3\ttag4']);
     });
 
+    it('should allow paste with tagging-tokens and tagging-label=="false"', function() {
+      var el = createUiSelectMultiple({tagging: true, taggingLabel: false, taggingTokens: ","});
+      clickMatch(el);
+      triggerPaste(el.find('input'), 'tag1');
+
+      expect($(el).scope().$select.selected).toEqual(['tag1']);
+    });
+
     it('should add an id to the search input field', function () {
       var el = createUiSelectMultiple({inputId: 'inid'});
       var searchEl = $(el).find('input.ui-select-search');
@@ -2587,6 +2746,49 @@ describe('ui-select tests', function() {
       clickItem(el, 'Nicole');
       clickItem(el, 'Samantha');
       expect(el.hasClass('ng-not-empty')).toBeTruthy();
+    });
+
+    it('should be able to re-select the item with removeselected set to false', function() {
+         scope.selection.selectedMultiple = [scope.people[4], scope.people[5]]; //Wladimir & Samantha
+         var el = createUiSelectMultiple({removeSelected : true});
+         expect(el.scope().$select.selected.length).toBe(2);
+         el.find('.ui-select-match-item').first().find('.ui-select-match-close').click();
+         expect(el.scope().$select.selected.length).toBe(1);
+         clickItem(el, 'Wladimir');
+         expect(el.scope().$select.selected.length).toBe(2);
+     });
+
+  describe('resetSearchInput option multiple', function () {
+      it('should be true by default', function () {
+        expect(createUiSelectMultiple().scope().$select.resetSearchInput).toBe(true);
+      });
+
+      it('should be false when set.', function () {
+        expect(createUiSelectMultiple({ resetSearchInput: false }).scope().$select.resetSearchInput).toBe(false);
+      });
+    });
+
+    describe('Reset the search value', function () {
+      it('should clear the search input when resetSearchInput is true', function () {
+        var el = createUiSelectMultiple();
+        $(el).scope().$select.search = 'idontexist';
+        $(el).scope().$select.select('idontexist');
+        expect($(el).scope().$select.search).toEqual('');
+      });
+
+      it('should not clear the search input when resetSearchInput is false', function () {
+        var el = createUiSelectMultiple({  resetSearchInput: false });
+        $(el).scope().$select.search = 'idontexist';
+        $(el).scope().$select.select('idontexist');
+        expect($(el).scope().$select.search).toEqual('idontexist');
+      });
+
+      it('should clear the search input when resetSearchInput is default set', function () {
+        var el = createUiSelectMultiple();
+        $(el).scope().$select.search = 'idontexist';
+        $(el).scope().$select.select('idontexist');
+        expect($(el).scope().$select.search).toEqual('');
+      });
     });
   });
 
@@ -2654,7 +2856,60 @@ describe('ui-select tests', function() {
         expect(el.scope().$select.searchEnabled).not.toBe(true);
       });
     });
+  });
 
+   describe('resetSearchInput option', function () {
+      it('should be true by default', function () {
+        expect(createUiSelect().scope().$select.resetSearchInput).toBe(true);
+      });
+
+      it('should be overridden by inline option reset-search-input=false', function () {
+        expect(createUiSelect({ resetSearchInput: false }).scope().$select.resetSearchInput).toBe(false);
+      });
+
+      describe('Reset the search value', function () {
+        it('should clear the search input when resetSearchInput is true', function () {
+          var control = createUiSelect();
+          setSearchText(control, 'idontexist');
+          clickMatch(control);
+          expect(control.scope().$select.search).toEqual('');
+        });
+
+        it('should not clear the search input', function () {
+          var control = createUiSelect({ resetSearchInput: false });
+          setSearchText(control, 'idontexist');
+          clickMatch(control);
+          expect(control.scope().$select.search).toEqual('idontexist');
+        });
+
+        it('should clear the search input when resetSearchInput is true and closeOnSelect is true', function () {
+          var control = createUiSelect({ closeOnSelect: true });
+          setSearchText(control, 'idontexist');
+          clickMatch(control);
+          expect(control.scope().$select.search).toEqual('');
+        });
+
+        it('should clear the search input when resetSearchInput is true and closeOnSelect is false', function () {
+          var control = createUiSelect({ closeOnSelect: false });
+          setSearchText(control, 'idontexist');
+          clickMatch(control);
+          expect(control.scope().$select.search).toEqual('');
+        });
+
+        it('should not clear the search input when resetSearchInput is false and closeOnSelect is false', function () {
+          var control = createUiSelect({ resetSearchInput: false, closeOnSelect: false });
+          setSearchText(control, 'idontexist');
+          clickMatch(control);
+          expect(control.scope().$select.search).toEqual('idontexist');
+        });
+
+        it('should not clear the search input when resetSearchInput is false and closeOnSelect is true', function () {
+          var control = createUiSelect({ resetSearchInput: false, closeOnSelect: true });
+          setSearchText(control, 'idontexist');
+          clickMatch(control);
+          expect(control.scope().$select.search).toEqual('idontexist');
+        });
+      });
   });
 
   describe('accessibility', function() {

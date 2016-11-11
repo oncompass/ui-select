@@ -8,6 +8,7 @@
              aria-activedescendant="ui-select-choices-row-{{ $select.generatedId }}-{{ $select.activeIndex }}"
              class="form-control ui-select-search"
              placeholder="{{$select.placeholder}}"
+             name="{{$select.$name}}"
              ng-model="$select.search">
     </div>
     <div class="ui-select-match"></div>

@@ -43,6 +43,7 @@ uis.controller('uiSelectCtrl',
   ctrl.clickTriggeredSelect = false;
   ctrl.$filter = $filter;
   ctrl.$element = $element;
+  ctrl.$name = $element.attr('name');
 
   // Use $injector to check for $animate and store a reference to it
   // $animate causes problems with empty choices list by not focusing to the editor (animateHandler never runs)

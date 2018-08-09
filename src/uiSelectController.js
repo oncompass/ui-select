@@ -245,7 +245,7 @@ uis.controller('uiSelectCtrl',
       data = data || ctrl.parserResult.source($scope);
       var selectedItems = ctrl.selected;
       //TODO should implement for single mode removeSelected
-      if (ctrl.isEmpty() || (angular.isArray(selectedItems) && !selectedItems.length) || !ctrl.removeSelected) {
+      if (ctrl.isEmpty() || (angular.isArray(selectedItems) && !selectedItems.length) || !ctrl.multiple || !ctrl.removeSelected) {
         ctrl.setItemsFn(data);
       }else{
         if ( data !== undefined && ctrl.multiple && data !== null ) {
@@ -336,18 +336,44 @@ uis.controller('uiSelectCtrl',
         ctrl.selected.filter(function (selection) { return angular.equals(selection, item); }).length > 0);
   };
 
+  var disabledItems = [];
+
+  function _updateItemDisabled(item, isDisabled) {
+    var disabledItemIndex = disabledItems.indexOf(item);
+    if (isDisabled && disabledItemIndex === -1) {
+      disabledItems.push(item);
+    }
+
+    if (!isDisabled && disabledItemIndex > -1) {
+      disabledItems.splice(disabledItemIndex, 1);
+    }
+  }
+
+  function _isItemDisabled(item) {
+    return disabledItems.indexOf(item) > -1;
+  }
+
   ctrl.isDisabled = function(itemScope) {
 
     if (!ctrl.open) return;
 
-    var itemIndex = ctrl.items.indexOf(itemScope[ctrl.itemProperty]);
+    var item = itemScope[ctrl.itemProperty];
+    var itemIndex = ctrl.items.indexOf(item);
     var isDisabled = false;
-    var item;
 
-    if (itemIndex >= 0 && (!angular.isUndefined(ctrl.disableChoiceExpression) || ctrl.multiple)) {
-      item = ctrl.items[itemIndex];
-      isDisabled = !!(itemScope.$eval(ctrl.disableChoiceExpression)) || _isItemSelected(item); // force the boolean value
-      item._uiSelectChoiceDisabled = isDisabled; // store this for later reference
+    if (itemIndex >= 0 && (angular.isDefined(ctrl.disableChoiceExpression) || ctrl.multiple)) {
+
+      if (item.isTag) return false;
+
+      if (ctrl.multiple) {
+        isDisabled = _isItemSelected(item);
+      }
+
+      if (!isDisabled && angular.isDefined(ctrl.disableChoiceExpression)) {
+        isDisabled = !!(itemScope.$eval(ctrl.disableChoiceExpression));
+      }
+
+      _updateItemDisabled(item, isDisabled);
     }
 
     return isDisabled;
@@ -356,16 +382,23 @@ uis.controller('uiSelectCtrl',
 
   // When the user selects an item with ENTER or clicks the dropdown
   ctrl.select = function(item, skipFocusser, $event) {
-    if (item === undefined || !item._uiSelectChoiceDisabled) {
+    if (item === undefined || !_isItemDisabled(item)) {
 
       if ( ! ctrl.items && ! ctrl.search && ! ctrl.tagging.isActivated) return;
 
-      if (!item || !item._uiSelectChoiceDisabled) {
-        if(ctrl.tagging.isActivated) {
-          // if taggingLabel is disabled, we pull from ctrl.search val
+      if (!item || !_isItemDisabled(item)) {
+        // if click is made on existing item, prevent from tagging, ctrl.search does not matter
+        ctrl.clickTriggeredSelect = false;
+        if($event && $event.type === 'click' && item)
+          ctrl.clickTriggeredSelect = true;
+
+        if(ctrl.tagging.isActivated && ctrl.clickTriggeredSelect === false) {
+          // if taggingLabel is disabled and item is undefined we pull from ctrl.search
           if ( ctrl.taggingLabel === false ) {
             if ( ctrl.activeIndex < 0 ) {
-              item = ctrl.tagging.fct !== undefined ? ctrl.tagging.fct(ctrl.search) : ctrl.search;
+              if (item === undefined) {
+                item = ctrl.tagging.fct !== undefined ? ctrl.tagging.fct(ctrl.search) : ctrl.search;
+              }
               if (!item || angular.equals( ctrl.items[0], item ) ) {
                 return;
               }
@@ -415,9 +448,6 @@ uis.controller('uiSelectCtrl',
         if (ctrl.closeOnSelect) {
           ctrl.close(skipFocusser);
         }
-        if ($event && $event.type === 'click') {
-          ctrl.clickTriggeredSelect = true;
-        }
       }
     }
   };
@@ -461,16 +491,53 @@ uis.controller('uiSelectCtrl',
     }
   };
 
-  ctrl.isLocked = function(itemScope, itemIndex) {
-      var isLocked, item = ctrl.selected[itemIndex];
+  // Set default function for locked choices - avoids unnecessary
+  // logic if functionality is not being used
+  ctrl.isLocked = function () {
+    return false;
+  };
 
-      if (item && !angular.isUndefined(ctrl.lockChoiceExpression)) {
-          isLocked = !!(itemScope.$eval(ctrl.lockChoiceExpression)); // force the boolean value
-          item._uiSelectChoiceLocked = isLocked; // store this for later reference
+  $scope.$watch(function () {
+    return angular.isDefined(ctrl.lockChoiceExpression) && ctrl.lockChoiceExpression !== "";
+  }, _initaliseLockedChoices);
+
+  function _initaliseLockedChoices(doInitalise) {
+    if(!doInitalise) return;
+
+    var lockedItems = [];
+
+    function _updateItemLocked(item, isLocked) {
+      var lockedItemIndex = lockedItems.indexOf(item);
+      if (isLocked && lockedItemIndex === -1) {
+        lockedItems.push(item);
+        }
+
+      if (!isLocked && lockedItemIndex > -1) {
+        lockedItems.splice(lockedItemIndex, 0);
+      }
+    }
+
+    function _isItemlocked(item) {
+      return lockedItems.indexOf(item) > -1;
+    }
+
+    ctrl.isLocked = function (itemScope, itemIndex) {
+      var isLocked = false,
+          item = ctrl.selected[itemIndex];
+
+      if(item) {
+        if (itemScope) {
+          isLocked = !!(itemScope.$eval(ctrl.lockChoiceExpression));
+          _updateItemLocked(item, isLocked);
+        } else {
+          isLocked = _isItemlocked(item);
+        }
       }
 
       return isLocked;
-  };
+    };
+  }
+
 
   var sizeWatch = null;
   var updaterScheduled = false;
@@ -623,18 +690,16 @@ uis.controller('uiSelectCtrl',
         if (items.length === 0) {
           items = [data];
         }
-        if (items.length > 0) {
         var oldsearch = ctrl.search;
-          angular.forEach(items, function (item) {
-            var newItem = ctrl.tagging.fct ? ctrl.tagging.fct(item) : item;
-            if (newItem) {
-              ctrl.select(newItem, true);
-            }
-          });
-          ctrl.search = oldsearch || EMPTY_SEARCH;
-          e.preventDefault();
-          e.stopPropagation();
-        }
+        angular.forEach(items, function (item) {
+          var newItem = ctrl.tagging.fct ? ctrl.tagging.fct(item) : item;
+          if (newItem) {
+            ctrl.select(newItem, true);
+          }
+        });
+        ctrl.search = oldsearch || EMPTY_SEARCH;
+        e.preventDefault();
+        e.stopPropagation();
       } else if (ctrl.paste) {
         ctrl.paste(data);
         ctrl.search = EMPTY_SEARCH;

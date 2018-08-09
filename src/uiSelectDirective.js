@@ -75,16 +75,15 @@ uis.directive('uiSelect',
           });
         }
 
-        scope.$watch('searchEnabled', function() {
-            var searchEnabled = scope.$eval(attrs.searchEnabled);
-            $select.searchEnabled = searchEnabled !== undefined ? searchEnabled : uiSelectConfig.searchEnabled;
+        scope.$watch(function () { return scope.$eval(attrs.searchEnabled); }, function(newVal) {
+          $select.searchEnabled = newVal !== undefined ? newVal : uiSelectConfig.searchEnabled;
         });
 
         scope.$watch('sortable', function() {
             var sortable = scope.$eval(attrs.sortable);
             $select.sortable = sortable !== undefined ? sortable : uiSelectConfig.sortable;
         });
-        
+
         attrs.$observe('limit', function() {
           //Limit the number of selections allowed
           $select.limit = (angular.isDefined(attrs.limit)) ? parseInt(attrs.limit, 10) : undefined;
@@ -362,6 +361,8 @@ uis.directive('uiSelect',
           });
         };
 
+        var opened = false;
+        
         scope.calculateDropdownPos = function() {
           if ($select.open) {
             dropdown = angular.element(element).querySelectorAll('.ui-select-dropdown');
@@ -370,8 +371,11 @@ uis.directive('uiSelect',
               return;
             }
 
-            // Hide the dropdown so there is no flicker until $timeout is done executing.
-            dropdown[0].style.opacity = 0;
+           // Hide the dropdown so there is no flicker until $timeout is done executing.
+           if ($select.search === '' && !opened) {
+              dropdown[0].style.opacity = 0;
+              opened = true;
+           }
 
             if (!uisOffset(dropdown).height && $select.$animate && $select.$animate.on && $select.$animate.enabled(dropdown)) {
               var needsCalculated = true;

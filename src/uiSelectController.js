@@ -248,7 +248,7 @@ uis.controller('uiSelectCtrl',
       if (ctrl.isEmpty() || (angular.isArray(selectedItems) && !selectedItems.length) || !ctrl.removeSelected) {
         ctrl.setItemsFn(data);
       }else{
-        if ( data !== undefined && ctrl.multiple) {
+        if ( data !== undefined && ctrl.multiple && data !== null ) {
           var filteredItems = data.filter(function(i) {
             return angular.isArray(selectedItems) ? selectedItems.every(function(selectedItem) {
               return !angular.equals(i, selectedItem);
@@ -262,6 +262,8 @@ uis.controller('uiSelectCtrl',
       if (ctrl.dropdownPosition === 'auto' || ctrl.dropdownPosition === 'up'){
         $scope.calculateDropdownPos();
       }
+
+      $scope.$broadcast('uis:refresh');
     };
 
     // See https://github.com/angular/angular.js/blob/v1.2.15/src/ng/directive/ngRepeat.js#L259
